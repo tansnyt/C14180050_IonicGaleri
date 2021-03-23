@@ -21,14 +21,18 @@ export class FotoService {
     const Foto = await Camera.getPhoto({
       resultType: CameraResultType.Uri,
       source: CameraSource.Camera,
-      quality: 100
+      quality: 100,
+      allowEditing: true
     });
     console.log(Foto);
 
-    this.dataFoto.unshift({
-      filePath: "Load",
-      webviewPath: Foto.webPath
-    });
+    const fileFoto = await this.simpanFoto(Foto);
+    this.dataFoto.unshift(fileFoto);
+
+    // this.dataFoto.unshift({
+    //   filePath: "Load",
+    //   webviewPath: Foto.webPath
+    // });
 
     Storage.set({
       key: this.keyFoto,
@@ -39,22 +43,35 @@ export class FotoService {
   public async simpanFoto(foto: CameraPhoto) {
     const base64Data = await this.readAsBase64(foto);
 
-    const namaFile = new Date().getTime + '.jpg';
+    const namaFile = new Date().getTime() + '.png';
+    console.log(namaFile);
+
     const simpanFile = await Filesystem.writeFile({
       path: namaFile,
       data: base64Data,
       directory: FilesystemDirectory.Data
     });
 
+    const response = await fetch(foto.webPath);
+    console.log('path', response);
+    const blob = await response.blob();
+    const dataFoto = new File([blob], foto.path, {
+      type: "image/png"
+    });
+
+    console.log('after', dataFoto);
+
     if (this.platform.is('hybrid')) {
       return {
         filePath: simpanFile.uri,
-        webviewPath: Capacitor.convertFileSrc(simpanFile.uri)
+        webviewPath: Capacitor.convertFileSrc(simpanFile.uri),
+        dataImage: dataFoto
       }
     } else {
       return {
         filePath: namaFile,
-        webviewPath: foto.webPath
+        webviewPath: foto.webPath,
+        dataImage: dataFoto
       }
     }
   }
@@ -91,7 +108,16 @@ export class FotoService {
           path: foto.filePath,
           directory: FilesystemDirectory.Data
         });
-        foto.webviewPath = `data:image/jpeg;base64,${readFile.data}`;
+        foto.webviewPath = `data:image/png;base64,${readFile.data}`;
+
+        const response = await fetch(foto.webviewPath);
+        const blob = await response.blob();
+
+        foto.dataImage = new File([blob], foto.filePath, {
+          type: "image/png"
+        });
+
+        console.log('tes', foto.dataImage);
       }
     }
 
@@ -102,4 +128,5 @@ export class FotoService {
 export interface Photo {
   filePath: string;
   webviewPath: string;
+  dataImage: File;
 }
