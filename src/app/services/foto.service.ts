@@ -102,7 +102,7 @@ export class FotoService {
     const listFoto = await Storage.get({ key: this.keyFoto });
     this.dataFoto = JSON.parse(listFoto.value) || [];
 
-    if (this.platform.is('hybrid')) {
+    if (!this.platform.is('hybrid')) {
       for (let foto of this.dataFoto) {
         const readFile = await Filesystem.readFile({
           path: foto.filePath,
